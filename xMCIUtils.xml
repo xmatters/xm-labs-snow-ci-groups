@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<unload unload_date="2017-04-03 18:48:38">
+<sys_remote_update_set action="INSERT_OR_UPDATE">
+<application display_value="Global">global</application>
+<application_name>Global</application_name>
+<application_scope>global</application_scope>
+<application_version/>
+<collisions/>
+<commit_date/>
+<deleted/>
+<description>A wrapper script for use in the xMatters CI Support groups add-on. </description>
+<inserted/>
+<name>xMCIUtils</name>
+<origin_sys_id/>
+<release_date/>
+<remote_sys_id>1851969fdbb57200a34fd421cf961961</remote_sys_id>
+<state>loaded</state>
+<summary/>
+<sys_class_name>sys_remote_update_set</sys_class_name>
+<sys_created_by>admin</sys_created_by>
+<sys_created_on>2017-04-03 18:48:38</sys_created_on>
+<sys_id>ed81de1bdb397200a34fd421cf961945</sys_id>
+<sys_mod_count>0</sys_mod_count>
+<sys_updated_by>admin</sys_updated_by>
+<sys_updated_on>2017-04-03 18:48:38</sys_updated_on>
+<update_set display_value=""/>
+<update_source display_value=""/>
+<updated/>
+</sys_remote_update_set>
+<sys_update_xml action="INSERT_OR_UPDATE">
+<action>INSERT_OR_UPDATE</action>
+<application display_value="Global">global</application>
+<category>customer</category>
+<comments/>
+<name>sys_script_include_cb2d45d1db731200fc79f7fdbf9619b5</name>
+<payload>&lt;?xml version="1.0" encoding="UTF-8"?&gt;&lt;record_update table="sys_script_include"&gt;&lt;sys_script_include action="INSERT_OR_UPDATE"&gt;&lt;access&gt;public&lt;/access&gt;&lt;active&gt;true&lt;/active&gt;&lt;api_name&gt;global.xMCIUtils&lt;/api_name&gt;&lt;client_callable&gt;false&lt;/client_callable&gt;&lt;description&gt; .&lt;/description&gt;&lt;name&gt;xMCIUtils&lt;/name&gt;&lt;script&gt;&lt;![CDATA[var xMCIUtils = Class.create();
+
+xMCIUtils.prototype = {
+	
+	initialize : function() {
+		this.maxDepth = gs.getProperty('glide.relationship.max_depth',10 );  // how deep to look
+		this.currentDepth = 0;
+		
+		this.services = {};  // list of affected services
+		this.parents = {};  // already checked parents
+		this.children = {};
+		this.maxSize = gs.getProperty('glide.relationship.threshold',1000 );  // how many records to return
+		this.added = 0;  // track how many added, since can't get size() for an Object
+	},
+	
+	/**
+ 	* Determine which business services are related to a specific CI
+ 	*
+ 	* Inputs:
+ 	*    id - is the sys_id of a configuration item ( cmdb_ci )
+ 	*    relation - an array containing one or both of "child", "parent"
+ 	*
+ 	* Returns:
+ 	*    an array of sys_id values for cmdb_ci_service records downstream of
+ 	*    or upthe input item
+ 	*/
+	
+	servicesRelatedToCI: function( id, relation ) {
+		
+		
+		var ci = new GlideRecord("cmdb_ci");
+		if( ci.get( id ) ) {
+			
+			// Add myself if I am a service
+			if( ci.sys_class_name == "cmdb_ci_service" )
+				this._addService( id, this.services );
+			
+			for( var k in relation ) {
+				this.currentDepth = 0;
+				this._addKinServices( id, {}, this.services, this.currentDepth, relation[k] );
+				
+				for( var item in this.services )
+					gs.info( relation[k] + ' Services: ' + item );
+			}
+			
+		}
+		
+		var svcarr = []; // services is an Object, convert to Array for final query
+		for ( var item in this.services )
+			svcarr.push( item );
+		
+		return svcarr; // list of affected services
+	},
+	
+	
+	
+	_addKinServices : function( value, list, services, currentDepth, relation ) {
+		
+		if( list[ value ] )  // already checked?
+			return;
+		
+		else
+			list[ value ] = true;
+		
+		if( this.added &gt;= this.maxSize )
+			return;
+		
+		else {
+			currentDepth++;
+			var al = SNC.CMDBUtil.getRelatedRecords( value, "", "cmdb_ci", "cmdb_ci", relation ); // returns ArrayList
+			
+			if( al.size() &gt; 0 ) {
+				// first add the unique services
+				var kids = new GlideRecord('cmdb_ci_service');
+				kids.addQuery('sys_id', al );
+				kids.query();
+				
+				while( kids.next()) {
+					var str = kids.sys_id;
+					
+					if( !services[ str ] ) {
+						
+						this._addService( str, services );
+						
+						if( this.added &gt;= this.maxSize )
+							return;
+						
+						if( currentDepth &lt; this.maxDepth )
+							this._addKinServices( str, list, services, currentDepth, relation );
+						
+					}
+				}
+				
+				// now check parents of non-services
+				for( var i=0; i &lt; al.size(); i++) {
+					var parent = al.get( i );
+					if( parent ) {
+						var str = parent + "";
+						if( !services[ str ] )  // if already in "services", we already checked its parents
+							if( currentDepth &lt; this.maxDepth )
+							this._addKinServices( str, list, services, currentDepth, relation );
+					}
+				}
+			}
+		}
+	},
+	
+	
+	
+	_addService: function( id, services ) {
+		services[ id ] = true;
+		this.added++;
+	},
+	
+	
+	type: 'xMCIUtils'
+	
+};]]&gt;&lt;/script&gt;&lt;sys_class_name&gt;sys_script_include&lt;/sys_class_name&gt;&lt;sys_created_by&gt;admin&lt;/sys_created_by&gt;&lt;sys_created_on&gt;2016-06-03 02:25:49&lt;/sys_created_on&gt;&lt;sys_customer_update&gt;true&lt;/sys_customer_update&gt;&lt;sys_id&gt;cb2d45d1db731200fc79f7fdbf9619b5&lt;/sys_id&gt;&lt;sys_mod_count&gt;7&lt;/sys_mod_count&gt;&lt;sys_name&gt;xMCIUtils&lt;/sys_name&gt;&lt;sys_package display_value="Global" source="global"&gt;global&lt;/sys_package&gt;&lt;sys_policy/&gt;&lt;sys_replace_on_upgrade&gt;false&lt;/sys_replace_on_upgrade&gt;&lt;sys_scope display_value="Global"&gt;global&lt;/sys_scope&gt;&lt;sys_update_name&gt;sys_script_include_cb2d45d1db731200fc79f7fdbf9619b5&lt;/sys_update_name&gt;&lt;sys_updated_by&gt;admin&lt;/sys_updated_by&gt;&lt;sys_updated_on&gt;2017-04-03 18:48:21&lt;/sys_updated_on&gt;&lt;/sys_script_include&gt;&lt;/record_update&gt;</payload>
+<remote_update_set display_value="xMCIUtils">ed81de1bdb397200a34fd421cf961945</remote_update_set>
+<replace_on_upgrade>false</replace_on_upgrade>
+<sys_created_by>admin</sys_created_by>
+<sys_created_on>2017-04-03 18:48:38</sys_created_on>
+<sys_id>6181de1bdb397200a34fd421cf961946</sys_id>
+<sys_mod_count>0</sys_mod_count>
+<sys_updated_by>admin</sys_updated_by>
+<sys_updated_on>2017-04-03 18:48:38</sys_updated_on>
+<table/>
+<target_name>xMCIUtils</target_name>
+<type>Script Include</type>
+<update_domain>global</update_domain>
+<update_set display_value=""/>
+<view/>
+</sys_update_xml>
+</unload>
