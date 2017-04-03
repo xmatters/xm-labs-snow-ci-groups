@@ -12,8 +12,8 @@ Notify support groups of CIs upstream or downstream of outages. This add in adds
 
 
 # Files
-* CISupportGroups.xml - The update set containing the ServiceNow files
-* xMCIUtils.xml - A script include in the Global application scope that builds the CI upstream/downstream list.
+* [CISupportGroups.xml](CISupportGroups.xml) - The update set containing the ServiceNow files
+* [xMCIUtils.xml](xMCIUtils.xml) - A script include in the Global application scope that builds the CI upstream/downstream list.
 
 # Installation
 This add on is packaged as an update set. So login to ServiceNow and navigate to "Retrieved Update Sets" and click the "Import Update Set from XML" link. Select the [CISupportGroups.xml](CISupportGroups.xml) file and click "Upload". This will load the files into ServiceNow, but they need to be "Previewed" for any collisions. 
