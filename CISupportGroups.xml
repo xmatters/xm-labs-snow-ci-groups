@@ -175,7 +175,7 @@
 								&lt;/li&gt;
 							&lt;/ul&gt;
 						&lt;/span&gt;
-						&lt;tags-input ng-model="recipients" id="recipients" name="recipients" required="required" template="x_xma_xmatters_xm_engage_recipient_template.do?sysparm_nostack=true"&gt;
+						&lt;tags-input ng-model="recipients" id="recipients" name="recipients" ng-required="!engageXMForm.ci_groups" template="x_xma_xmatters_xm_engage_recipient_template.do?sysparm_nostack=true"&gt;
 							&lt;auto-complete source="activeRecipientType.typeahead($query)"&gt;&lt;/auto-complete&gt;
 						&lt;/tags-input&gt;
 					&lt;/div&gt;
@@ -193,7 +193,7 @@
 				&lt;div class="form-group col-md-12 has-feedback" ng-class="engageXMForm.ci_groups.$error.required &amp;amp;&amp;amp; engageXMForm.recipients.$error.required ? 'is-required' : 'is-filled'"&gt;
 					&lt;span class="required-marker" &gt;&lt;/span&gt;
 					&lt;label class="xm-label"&gt;{{ 'ENGAGE_XM.LABEL.CI_GROUPS' | translate }}&lt;/label&gt;
-					&lt;tags-input ng-model="ci_groups" id="ci_groups" name="ci_groups" required="required" template="x_xma_xmatters_xm_engage_ci_group_template.do?sysparm_nostack=true"
+					&lt;tags-input ng-model="ci_groups" id="ci_groups" name="ci_groups" ng-required="!engageXMForm.recipients" template="x_xma_xmatters_xm_engage_ci_group_template.do?sysparm_nostack=true"
 									display-property="label" 
 									 key-property="label"
 									placeholder="Pick a group" replace-spaces-with-dashes="false"&gt;
