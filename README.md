@@ -5,6 +5,15 @@ Notify support groups of CIs upstream or downstream of outages. This add in adds
   <img src="images/CIGroups1.png" height="400">
 </kbd>
 
+---------
+
+<kbd>
+  <img src="https://github.com/xmatters/xMatters-Labs/raw/master/media/disclaimer.png">
+</kbd>
+
+---------
+
+
 # Pre-Requisites
 * ServiceNow Fuji or Istanbul
 * ServiceNow integration to [xMatters v3.7.11+](https://store.servicenow.com/sn_appstore_store.do#!/store/application/5950d7444f2231000e9fa88ca310c78c/3.7.12)
