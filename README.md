@@ -25,7 +25,7 @@ Notify support groups of CIs upstream or downstream of outages. This extension c
 * [xMCIUtils.xml](xMCIUtils.xml) - A script include in the Global application scope that builds the CI upstream/downstream list.
 
 # Installation
-This add on is packaged as an update set. So login to ServiceNow and navigate to "Retrieved Update Sets" and click the "Import Update Set from XML" link. Select the [Engage with xMatters Related Service Groups for 5.0.1.xml](Engage with xMatters Related Service Groups for 5.0.1.xml) file and click "Upload". This will load the files into ServiceNow, but they need to be "Previewed" for any collisions. 
+This add on is packaged as an update set. So login to ServiceNow and navigate to "Retrieved Update Sets" and click the "Import Update Set from XML" link. Select the [CISupportGroups5.0.1.xml](CISupportGroups5.0.1.xml) file and click "Upload". This will load the files into ServiceNow, but they need to be "Previewed" for any collisions. 
 
 <kbd>
   <img src="images/preview_update_set.png" height="400">
