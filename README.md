@@ -1,5 +1,5 @@
 # ServiceNow CI Support groups
-Notify support groups of CIs upstream or downstream of outages. This add in adds a new Groups section to the Engage with xMatters form. 
+Notify support groups of CIs upstream or downstream of outages. This extension creates a button in Engage with xMatters which automatically adds the support groups of the related CIs to the recipient list.
 
 <kbd>
   <img src="images/CIGroups1.png" height="400">
@@ -15,13 +15,13 @@ Notify support groups of CIs upstream or downstream of outages. This add in adds
 
 
 # Pre-Requisites
-* ServiceNow Fuji or Istanbul
-* ServiceNow integration to [xMatters v3.7.11+](https://store.servicenow.com/sn_appstore_store.do#!/store/application/5950d7444f2231000e9fa88ca310c78c/3.7.12)
+* ServiceNow Helsinki, Istanbul, Jakarata or Kingston
+* ServiceNow integration to [xMatters v5.0.1+](https://store.servicenow.com/sn_appstore_store.do#!/store/application/5950d7444f2231000e9fa88ca310c78c/)
 * xMatters account - If you don't have one, [get one](https://www.xmatters.com)!
 
 
 # Files
-* [CISupportGroups.xml](CISupportGroups.xml) - The update set containing the ServiceNow files
+* [Engage with xMatters Related Service Groups for 5.0.1.xml](Engage with xMatters Related Service Groups for 5.0.1.xml) - The update set containing the ServiceNow files
 * [xMCIUtils.xml](xMCIUtils.xml) - A script include in the Global application scope that builds the CI upstream/downstream list.
 
 # Installation
@@ -35,14 +35,11 @@ Click the Preview button and the system will query to see if any files will be u
 
 Repeat this process for the [xMCIUtils](xMCIUtils.xml) file. 
 
-## Application ABC set up
-No additional set up is needed. When the Engage with xMattes form is displayed, it will retrieve the CI Groups and make them available for selection. 
-
 ## xMatters set up
-None. The groups selected in the Engage with xMatters form will be added to the recipients array. 
+None. The groups selected in the Engage with xMatters form will be added to the recipients list. 
    
 # Testing
-To test, navigate to an already open Incident and click the Engage with xMatters button. A new field will be seen with selectable tags for each upstream and downstream CI based on the CI in the parent Incident ticket. 
+To test, navigate to an existing Incident in ServiceNow (with an associated CI) and click the Engage with xMatters button. If the Incident CI has related CIs, the Add Related Service Groups button at the bottom right of the dialog will become enabled. Click the button to add the groups to the recipient list. 
 
 # Troubleshooting
 Make sure the parent Incident has a CI populated.
