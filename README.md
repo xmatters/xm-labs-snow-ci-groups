@@ -31,7 +31,7 @@ This add on is packaged as an update set. So login to ServiceNow and navigate to
   <img src="images/preview_update_set.png" height="400">
 </kbd>
 
-Click the Preview button and the system will query to see if any files will be updated. There will be several scripts that need to be updated so pick the "Accept remote update" to add a new version to the script. Don't worry, the old versions will be saved and can be merged later. Click "Commit" to commit the changes to the database. 
+Click the Preview button and the system will query to see if any files will be updated. If required, pick the "Accept remote update" option to add a new version to the script. Don't worry, the old versions will be saved and can be merged later. Click "Commit" to commit the changes to the database. 
 
 Repeat this process for the [xMCIUtils](xMCIUtils.xml) file. 
 
