@@ -21,7 +21,7 @@ Notify support groups of CIs upstream or downstream of outages. This extension c
 
 
 # Files
-* [Engage with xMatters Related Service Groups for 5.0.1.xml](Engage with xMatters Related Service Groups for 5.0.1.xml) - The update set containing the ServiceNow files
+* [CISupportGroups5.0.1.xml](CISupportGroups5.0.1.xml) - The update set containing the ServiceNow files
 * [xMCIUtils.xml](xMCIUtils.xml) - A script include in the Global application scope that builds the CI upstream/downstream list.
 
 # Installation
