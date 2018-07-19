@@ -2,7 +2,7 @@
 Notify support groups of CIs upstream or downstream of outages. This extension creates a button in Engage with xMatters which automatically adds the support groups of the related CIs to the recipient list.
 
 <kbd>
-  <img src="images/CIGroups1.png" height="400">
+  <img src="images/CIGroups.png" height="400">
 </kbd>
 
 ---------
