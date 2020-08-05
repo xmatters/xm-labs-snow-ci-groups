@@ -1,0 +1,650 @@
+<?xml version="1.0" encoding="UTF-8"?><unload unload_date="2020-08-05 23:08:14">
+<sys_remote_update_set action="INSERT_OR_UPDATE">
+<application display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</application>
+<application_name>xMatters</application_name>
+<application_scope>x_xma_xmatters</application_scope>
+<application_version>5.5.4</application_version>
+<collisions/>
+<commit_date/>
+<deleted/>
+<description>Supports ServiceNow integration 5.5+</description>
+<inserted/>
+<name>Engage CMDB Extension v2.0</name>
+<origin_sys_id/>
+<parent display_value=""/>
+<release_date/>
+<remote_base_update_set display_value=""/>
+<remote_parent_id/>
+<remote_sys_id>1f1f5fe72f121010338dd6c6f699b636</remote_sys_id>
+<state>loaded</state>
+<summary/>
+<sys_class_name>sys_remote_update_set</sys_class_name>
+<sys_created_by>admin</sys_created_by>
+<sys_created_on>2020-08-05 23:08:13</sys_created_on>
+<sys_id>df8086842f225010338dd6c6f699b6d2</sys_id>
+<sys_mod_count>0</sys_mod_count>
+<sys_updated_by>admin</sys_updated_by>
+<sys_updated_on>2020-08-05 23:08:13</sys_updated_on>
+<update_set display_value=""/>
+<update_source display_value=""/>
+<updated/>
+</sys_remote_update_set>
+<sys_update_xml action="INSERT_OR_UPDATE">
+<action>INSERT_OR_UPDATE</action>
+<application display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</application>
+<category>customer</category>
+<comments/>
+<name>sys_ui_script_e4c0f8824f6c220078bae321a310c7b6</name>
+<payload>&lt;?xml version="1.0" encoding="UTF-8"?&gt;&lt;record_update table="sys_ui_script"&gt;&lt;sys_ui_script action="INSERT_OR_UPDATE"&gt;&lt;active&gt;true&lt;/active&gt;&lt;description/&gt;&lt;global&gt;false&lt;/global&gt;&lt;name&gt;x_xma_xmatters.xm_app_engage_xmatters&lt;/name&gt;&lt;script&gt;&lt;![CDATA[var engageApp = angular.module('xm.engage-xm', [ 'ngTagsInput', 'ngMessages', 'pascalprecht.translate', 'xm.xmatters-service', 'xm.location-service', 'xm.options-provider', 'xm.glide-ajax' ]);
+ // Global configuration for ng tags input module
+engageApp.config(function(tagsInputConfigProvider) {
+    tagsInputConfigProvider.setDefaults('tagsInput', {
+        placeholder: 'Find Recipients',
+        replaceSpacesWithDashes: false,
+        addFromAutocompleteOnly: true,
+        displayProperty: 'name',
+        keyProperty : 'targetName'
+    }).setDefaults('autoComplete', {
+        displayProperty: 'name',
+        minLength: 2
+    });
+});
+// Configuration for translations
+engageApp.config(function ($translateProvider) {
+  $translateProvider.translations('en', {
+    ENGAGE_XM: {
+        TITLE: 'Engage with xMatters',
+        LABEL: {
+            RECIPIENTS: 'Recipients',
+            SEND_PRIORITY: 'Priority',
+            CONFERENCE_BRIDGE: 'Conference Bridge',
+            SUBJECT: 'Subject',
+            MESSAGE: 'Message'
+        },
+        BUTTON: {
+            SUBMIT: 'Submit',
+            CANCEL: 'Cancel',
+            VIEW_RECORD: 'View Record',
+            ADD_CI_GROUPS: "Add Related Service Groups"
+        },
+        ERROR: {
+            REQUIRED: 'Required field',
+            MAX_LENGTH: 'Maximum length {{max_length}} characters'
+        },
+        MESSAGE: {
+            SUCCESS: 'Your request has been submitted successfully. To track the progress of this request in ServiceNow, view the Engage with xMatters record.'
+        },
+        OPTIONS: {
+            CONFERENCE_BRIDGE: {
+                'None': '-- None --',
+                'External_Category': 'External Bridges',
+                'Hosted_Category':   'xMatters Hosted Bridges',
+                'Hosted_New': 'Create new'
+            },
+            SEND_PRIORITY: {
+                "low": 'Low',
+                "medium": 'Medium',
+                "high": 'High'
+            },
+            RECIPIENT_TYPE: {
+                "people": "People",
+                "groups": "Groups"
+            }
+        }
+    }
+  });
+  $translateProvider.preferredLanguage('en');
+});
+engageApp.controller('engageCtlr',
+    function($scope, $window, $translate, XMService, LocationService, OptionsProvider, GlideAjax) {
+         // Core scope variables
+        $scope.is_finished = false;
+        $scope.is_invalid = false;
+        $scope.global_errors = [];
+
+         // form model scope variables and default values
+        $scope.subject = '';
+        $scope.message = '';
+        $scope.recipients = [];
+        $scope.send_priority = 'medium';
+
+         // result scope variable
+        $scope.engage_url = '';
+        $scope.hasRelatedServices = false;
+
+         // behind the scenes scope variables used for options/state
+        $scope.xm_search_state = XMService.searchState;
+        $scope.conference_bridge_options = OptionsProvider.conference_bridges;
+        $scope.conference_bridge = OptionsProvider.conference_bridges[0];
+        $scope.send_priority_options = OptionsProvider.send_priorities;
+        $scope.recipientTypes = [
+            {
+                "label": "ENGAGE_XM.OPTIONS.RECIPIENT_TYPE.people",
+                "typeahead": XMService.searchPeople
+            },
+            {
+                "label": "ENGAGE_XM.OPTIONS.RECIPIENT_TYPE.groups",
+                "typeahead": XMService.searchGroups
+            }
+        ];
+        $scope.activeRecipientType = $scope.recipientTypes[0];
+
+        // Set the incident id scope variable based on search parameters in the url
+        $scope.incident_id = LocationService.searchParams.incident_id;
+        if( typeof $scope.incident_id === 'undefined' || $scope.incident_id === null || $scope.incident_id === '' ) {
+            jslog( 'No incident identifier was defined' );
+            $scope.global_errors.push( 'Missing "incident_id" parameter: A valid ServiceNow Incident system id must be set to continue' );
+        }
+
+        $scope.all_ci_groups = [];
+        var retrieveIncident = new GlideAjax( 'xMattersAjaxCIGroups' );
+        retrieveIncident.addParam( 'sysparm_name', 'getIncident' );
+        retrieveIncident.addParam( 'sysparm_sys_id', $scope.incident_id );
+        console.log('$scope.incident_id: ' + $scope.incident_id);
+        retrieveIncident.send().then( function( resp ) {
+			console.log( 'returned from retrieveIncident : ' + JSON.stringify( resp ) );
+            if( resp.success ) {
+                $scope.incident = resp.data;
+                if( $scope.incident.cmdb_ci != null &amp;&amp; $scope.incident.cmdb_ci != "") {
+                    console.log("$scope.incident.cmdb_ci: " + $scope.incident.cmdb_ci);
+                    var ga = new GlideAjax( 'xMattersAjaxCIGroups' );
+                    ga.addParam( 'sysparm_name', 'getRelatedCiSupportGroups' );
+                    ga.addParam( 'sysparm_cisys_id', $scope.incident.cmdb_ci );
+                    ga.send().then( function( resp ) {
+						console.log( 'Retruned from getRelatedCiSupportGroups: ' + JSON.stringify( resp ) );
+                        if( resp.success ) {
+                            $scope.all_ci_groups = resp.data;
+                            if ($scope.all_ci_groups.length &gt; 0) {
+                                $scope.hasRelatedServices = true;
+                            }
+                        } else {
+                            console.log( resp );
+                        }
+                    } ).catch( function( resp ){
+                        console.log( resp );
+                    } );
+                }
+            } else {
+                console.log( 'Error getting Incident: ' + JSON.stringify( resp ) );
+            }
+        });
+
+        $scope.addCiGroups = function() {
+            var i, ciGroup;
+            if ($scope.incident.cmdb_ci == null || $scope.incident.cmdb_ci == "") {
+                $scope.no_ci= true;
+                return;
+            }
+            if ($scope.recipients == null || $scope.recipients.length == 0) {
+                // Empty recipient list. Add all related CI support groups to recipient list.
+                $scope.recipients = [];
+                for (i = 0; i &lt; $scope.all_ci_groups.length; i++) {
+                    ciGroup = $scope.all_ci_groups[i];
+                    $scope.recipients.push({"name" : ciGroup.label, "targetName" : ciGroup.label, "group" : ciGroup.group, "icon" : "users" });                 
+                }               
+            } else {
+                // Recipient list not empty. Need to check each related CI support group to see if it
+                // already exists in the recipient list.
+                var j, addRecipient;
+                for (i = 0; i &lt; $scope.all_ci_groups.length; i++) {
+                    ciGroup = $scope.all_ci_groups[i];
+                    addRecipient = true;
+                    for (j = 0; j &lt; $scope.recipients.length; j++) {
+                        if (ciGroup.label == $scope.recipients[j].name) {
+                            // Duplicate
+                            addRecipient = false;
+                            break;
+                        }
+                    }
+                    if (addRecipient) {
+                        $scope.recipients.push({"name" : ciGroup.label, "targetName" : ciGroup.label, "group" : ciGroup.group, "icon" : "users" });                 
+                    }
+                }
+            }
+            console.log( $scope.engageXMForm );
+        };          
+        
+
+        
+        /**
+         * Changes the active recipient type based on the input group action dropdown selection
+         *
+         * @param  {Integer} selectedType
+         *         index of the selected recipient option
+         */
+        $scope.selectRecipientType = function( selectedIndex ) {
+            $scope.activeRecipientType = $scope.recipientTypes[selectedIndex];
+        };
+
+        var closeDialog = function(optionalMessage) {
+            var data = {
+                type: "DIALOG_CLOSE"
+            };
+            if(optionalMessage) {
+                data.message = optionalMessage;
+            }
+            $window.parent.postMessage(data, window.location.origin);
+        };
+
+        $scope.cancel = function() {
+            closeDialog();
+        };
+
+        /**
+         * Submits the engageXMForm form, and if valid, tries to create a new Engage with xMatters record via
+         * the xMattersAjaxEngage client callable script include.
+         */
+        $scope.submit = function() {
+            $scope.engageXMForm.$setSubmitted( true );
+            if( $scope.engageXMForm.$invalid ) {
+                jslog( 'The form will not be submitted in an invalid state' );
+                jslog( $scope.engageXMForm );
+            } else {
+                var recipientTargets = {};
+                for( var i = 0; i &lt; $scope.recipients.length; i++ ) {
+                    recipientTargets[$scope.recipients[i].targetName] = "";
+                }
+                var formData = {
+                    "recipients": JSON.stringify(recipientTargets),
+                    "subject": $scope.subject,
+                    "message": $scope.message,
+                    "conference_bridge": $scope.conference_bridge.value,
+                    "conference_bridge_type": $scope.conference_bridge.type,
+                    "incident_id": $scope.incident_id,
+                    "send_priority": $scope.send_priority,
+                    "initiator_display_name": g_user.getFullName(),
+                    "initiator_username": g_user.userName
+                };
+                var ga = new GlideAjax( 'xMattersAjaxEngage' );
+                ga.addParam( 'sysparm_name', 'submitEngageWithXMatters' );
+                ga.addParam( 'form_data', JSON.stringify( formData ) );
+                ga.send().then( function( resp ) {
+                    if( resp.success ) {
+                        $translate('ENGAGE_XM.MESSAGE.SUCCESS').then(function(successMsg){
+                            closeDialog(successMsg);
+                        });
+                        // replacing our complete page by closing the dialog for you
+                        //$scope.is_finished = true;
+                        //$scope.engage_url = '/nav_to.do?uri=x_xma_xmatters_engage_with_xmatters.do?sys_id=' + resp.data.sys_id;
+                    } else {
+                        jslog( resp );
+                    }
+                } ).catch( function( resp ){
+                    jslog( resp );
+                } );
+            }
+        };
+    } );
+]]&gt;&lt;/script&gt;&lt;script_name&gt;xm_app_engage_xmatters&lt;/script_name&gt;&lt;sys_class_name&gt;sys_ui_script&lt;/sys_class_name&gt;&lt;sys_created_by&gt;admin&lt;/sys_created_by&gt;&lt;sys_created_on&gt;2016-07-12 15:03:56&lt;/sys_created_on&gt;&lt;sys_id&gt;e4c0f8824f6c220078bae321a310c7b6&lt;/sys_id&gt;&lt;sys_mod_count&gt;15&lt;/sys_mod_count&gt;&lt;sys_name&gt;x_xma_xmatters.xm_app_engage_xmatters&lt;/sys_name&gt;&lt;sys_package display_value="xMatters" source="x_xma_xmatters"&gt;5950d7444f2231000e9fa88ca310c78c&lt;/sys_package&gt;&lt;sys_policy/&gt;&lt;sys_scope display_value="xMatters"&gt;5950d7444f2231000e9fa88ca310c78c&lt;/sys_scope&gt;&lt;sys_update_name&gt;sys_ui_script_e4c0f8824f6c220078bae321a310c7b6&lt;/sys_update_name&gt;&lt;sys_updated_by&gt;admin&lt;/sys_updated_by&gt;&lt;sys_updated_on&gt;2020-08-04 18:27:43&lt;/sys_updated_on&gt;&lt;ui_type&gt;0&lt;/ui_type&gt;&lt;use_scoped_format&gt;false&lt;/use_scoped_format&gt;&lt;/sys_ui_script&gt;&lt;/record_update&gt;</payload>
+<payload_hash>-2124287581</payload_hash>
+<remote_update_set display_value="Engage CMDB Extension v2.0">df8086842f225010338dd6c6f699b6d2</remote_update_set>
+<replace_on_upgrade>false</replace_on_upgrade>
+<sys_created_by>admin</sys_created_by>
+<sys_created_on>2020-08-05 23:08:13</sys_created_on>
+<sys_id>138086842f225010338dd6c6f699b6d4</sys_id>
+<sys_mod_count>0</sys_mod_count>
+<sys_recorded_at>173babaaf350000001</sys_recorded_at>
+<sys_updated_by>admin</sys_updated_by>
+<sys_updated_on>2020-08-05 23:08:13</sys_updated_on>
+<table/>
+<target_name>x_xma_xmatters.xm_app_engage_xmatters</target_name>
+<type>UI Script</type>
+<update_domain>global</update_domain>
+<update_guid>6cc6ffe367521010a6dd2a95e67fd488</update_guid>
+<update_guid_history>6cc6ffe367521010a6dd2a95e67fd488:-2124287581,ed36ff676252101025bf1d470177eb60:-1386670371,5b023763f55210105f486a6bb15a719c:-1741040806,2601b3e30e52101025e93a232f065f08:-1063419044,ac99e6b9109fcc14daf173297e47e186:34075698,a0f852423a430814899315928beea32d:-283374167,9906ab0de80feb4016ac9e993c50dff8:-110057943</update_guid_history>
+<update_set display_value=""/>
+<view/>
+</sys_update_xml>
+<sys_update_xml action="INSERT_OR_UPDATE">
+<action>INSERT_OR_UPDATE</action>
+<application display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</application>
+<category>customer</category>
+<comments/>
+<name>sys_script_include_bcc17be32f521010338dd6c6f699b684</name>
+<payload>&lt;?xml version="1.0" encoding="UTF-8"?&gt;&lt;record_update table="sys_script_include"&gt;&lt;sys_script_include action="INSERT_OR_UPDATE"&gt;&lt;access&gt;public&lt;/access&gt;&lt;active&gt;true&lt;/active&gt;&lt;api_name&gt;x_xma_xmatters.xMattersAjaxCIGroups&lt;/api_name&gt;&lt;caller_access/&gt;&lt;client_callable&gt;true&lt;/client_callable&gt;&lt;description/&gt;&lt;name&gt;xMattersAjaxCIGroups&lt;/name&gt;&lt;script&gt;&lt;![CDATA[gs.include( "xMattersAjaxEngage" );
+
+var xMattersAjaxCIGroups = Class.create();
+xMattersAjaxCIGroups.prototype = Object.extendsObject( global.AbstractAjaxProcessor, Object.extendsObject( new xMattersAjaxEngage(), {
+	
+	getIncident: function() {
+
+		var sys_id = this.getParameter( 'sysparm_sys_id' );	
+		var rec = new GlideRecord( 'incident' );
+		rec.get( sys_id );
+		
+		var fields = [ 'number', 'short_description', 'cmdb_ci' ];
+		
+		response =  {
+			success: true,
+			data: this._getIncFields( fields, rec )
+		};
+		
+		return new global.JSON().encode( response );
+		
+	},
+	
+	getRelatedCiSupportGroups: function() {
+		var CISysID = this.getParameter( 'sysparm_cisys_id' );
+        var CIUtil = new global.xMCIUtils();
+        var serviceIds = CIUtil.servicesRelatedToCI( CISysID, ["child", "parent"] );
+	
+        var list = [];
+		var id = 0;
+        for( var i in serviceIds ) {
+            var service = new GlideRecord("cmdb_ci_service");
+            service.get( serviceIds[i] );
+
+			group = service.support_group.name.getDisplayValue() || 'None';
+			label = group + ' (CI: ' + service.getDisplayValue() + ')';
+
+            list.push( { 
+				"id": id, 
+				"ci": service.getDisplayValue(), 
+				"group": group, 
+				"label": label } );
+
+			id ++;
+        }
+		
+	gs.info( 'getRelatedCiSupportGroups: list: ' + (new global.JSON().encode( list ) ) );
+		var response = {
+			"success": true,
+			"data": list
+		};
+		
+		return new global.JSON().encode( response );
+    },
+	
+	// There isn't a GlideRecord.toJSON function, so
+	// we'll fake it by just grabbing a handful of fields
+	_getIncFields: function( fields, rec ) {
+
+		var resp = {};
+		for( var f in fields ) {
+			key = fields[f];
+			val = '' + rec[ fields[f] ];  //.getDisplayValue();
+			//gs.info( 'Key: ' + key + '. Val: ' + val );
+			resp[ key ] = val;
+		}
+		
+		return resp;
+	},	
+
+    type: 'xMattersAjaxCIGroups'
+}));]]&gt;&lt;/script&gt;&lt;sys_class_name&gt;sys_script_include&lt;/sys_class_name&gt;&lt;sys_created_by&gt;admin&lt;/sys_created_by&gt;&lt;sys_created_on&gt;2020-08-04 18:07:36&lt;/sys_created_on&gt;&lt;sys_id&gt;bcc17be32f521010338dd6c6f699b684&lt;/sys_id&gt;&lt;sys_mod_count&gt;1&lt;/sys_mod_count&gt;&lt;sys_name&gt;xMattersAjaxCIGroups&lt;/sys_name&gt;&lt;sys_package display_value="xMatters" source="x_xma_xmatters"&gt;5950d7444f2231000e9fa88ca310c78c&lt;/sys_package&gt;&lt;sys_policy/&gt;&lt;sys_scope display_value="xMatters"&gt;5950d7444f2231000e9fa88ca310c78c&lt;/sys_scope&gt;&lt;sys_update_name&gt;sys_script_include_bcc17be32f521010338dd6c6f699b684&lt;/sys_update_name&gt;&lt;sys_updated_by&gt;admin&lt;/sys_updated_by&gt;&lt;sys_updated_on&gt;2020-08-04 18:20:25&lt;/sys_updated_on&gt;&lt;/sys_script_include&gt;&lt;/record_update&gt;</payload>
+<payload_hash>-84256221</payload_hash>
+<remote_update_set display_value="Engage CMDB Extension v2.0">df8086842f225010338dd6c6f699b6d2</remote_update_set>
+<replace_on_upgrade>false</replace_on_upgrade>
+<sys_created_by>admin</sys_created_by>
+<sys_created_on>2020-08-05 23:08:13</sys_created_on>
+<sys_id>178086842f225010338dd6c6f699b6d3</sys_id>
+<sys_mod_count>0</sys_mod_count>
+<sys_recorded_at>173bab3ffe30000001</sys_recorded_at>
+<sys_updated_by>admin</sys_updated_by>
+<sys_updated_on>2020-08-05 23:08:13</sys_updated_on>
+<table/>
+<target_name>xMattersAjaxCIGroups</target_name>
+<type>Script Include</type>
+<update_domain>global</update_domain>
+<update_guid>ed15ff67a6521010100f06c30eb6d621</update_guid>
+<update_guid_history>ed15ff67a6521010100f06c30eb6d621:-84256221,fd227fe3ec5210109f776efefdc81fb2:-823120904</update_guid_history>
+<update_set display_value=""/>
+<view/>
+</sys_update_xml>
+<sys_update_xml action="INSERT_OR_UPDATE">
+<action>INSERT_OR_UPDATE</action>
+<application display_value="xMatters">5950d7444f2231000e9fa88ca310c78c</application>
+<category>customer</category>
+<comments/>
+<name>sys_ui_page_c65690b94f2822008472a88ca310c7c2</name>
+<payload>&lt;?xml version="1.0" encoding="UTF-8"?&gt;&lt;record_update table="sys_ui_page"&gt;&lt;sys_ui_page action="INSERT_OR_UPDATE"&gt;&lt;category&gt;general&lt;/category&gt;&lt;client_script/&gt;&lt;description/&gt;&lt;direct&gt;false&lt;/direct&gt;&lt;endpoint&gt;x_xma_xmatters_xm_engage_with_xmatters_content.do&lt;/endpoint&gt;&lt;html&gt;&lt;![CDATA[&lt;?xml version="1.0" encoding="utf-8" ?&gt;
+&lt;j:jelly xmlns:j="jelly:core" xmlns:g="glide" xmlns:j2="null" xmlns:g2="null" trim="false"&gt;
+&lt;script src="x_xma_xmatters.angular.min.jsdbx"&gt;&lt;/script&gt;
+&lt;script src="x_xma_xmatters.angular-ui-bootstrap.min.jsdbx"&gt;&lt;/script&gt;
+&lt;script src="x_xma_xmatters.xm_app_engage_xmatters.jsdbx"&gt;&lt;/script&gt;
+&lt;script src="x_xma_xmatters.angular.translate.min.jsdbx"&gt;&lt;/script&gt;
+&lt;script src="x_xma_xmatters.xm_mod_glide_ajax.jsdbx"&gt;&lt;/script&gt;
+&lt;script src="x_xma_xmatters.xm_mod_xmatters_service.jsdbx"&gt;&lt;/script&gt;
+&lt;script src="x_xma_xmatters.xm_mod_location_service.jsdbx"&gt;&lt;/script&gt;
+&lt;script src="x_xma_xmatters.xm_mod_options_provider.jsdbx"&gt;&lt;/script&gt;
+&lt;script src="x_xma_xmatters.ng-tags-input.min.jsdbx"&gt;&lt;/script&gt;
+&lt;script src="x_xma_xmatters.moment.min.jsdbx"&gt;&lt;/script&gt;
+&lt;link href="//netdna.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.css" rel="stylesheet"&gt;&lt;/link&gt;
+&lt;link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous"&gt;&lt;/link&gt;
+&lt;style&gt;
+	body {
+		font-family: SourceSansPro-Regular, SourceSansPro, "Helvetica Neue", Arial;
+	        padding-top: 0;
+	}
+	.xm-label {
+		font-size: 13px;
+		font-weight: normal;
+	}
+	input.xm-tracked.ng-dirty, textarea.xm-tracked.ng-dirty {
+		border: 1px orange solid;
+	}
+	form.ng-submitted input.ng-invalid, form.ng-submitted textarea.ng-invalid {
+		border: 1px red solid;
+	}
+	a.xm-help {
+		margin-left: 5px;
+		display: inline-block !important;
+	}
+	.ng-dirty .tags {
+		/**border-color: orange; **/
+	}
+	.xm-tags-input-group .input-group-btn .btn {
+	   height: 34px;
+	}
+	.tags {
+	    border: 1px solid #ccc !important;
+	}
+	form.ng-submitted .ng-invalid .tags {
+		border-color: red !important;
+	}
+	tags-input .tags {
+	     box-shadow: none !important;
+	}
+	tags-input .tags .tag-item {
+	    background: #445465;
+	    border: 0;
+	}
+	tags-input .tags .tag-item .remove-button {
+	    color: white;
+	}
+	tags-input .tags .tag-item .remove-button:hover {
+	    color: #bec1c6;;
+	}
+	tags-input .tags .tag-item.selected {
+		background-color: #ae1b1f;
+	}
+	.xm-input-group-btn {
+		background-color: #f6f6f6;
+		border: solid 1px #cccccc;
+		width: 106px !important;
+	}
+	.xm-left {
+	     float: left;
+	}
+	.xm-right {
+	    float: right;
+	}
+	.xm-tag-feedback {
+	   right: 10px;
+	}
+	.xm-error {
+	   color: red;
+	   font-size: 13px;
+	}
+	.xm-btn-default, .xm-btn-default:focus, .xm-btn-default:hover {
+	    font-family: SourceSansPro-Regular, SourceSansPro, "Helvetica Neue", Arial;
+	    color: #343d47;
+	    background-color: rgba(255, 255, 255, 0.45);
+	    border-color: #bdc0c4;
+	}
+	tags-input .tags .tag-item {
+	    font-family: SourceSansPro-Regular, SourceSansPro, "Helvetica Neue", Arial;
+	}
+	tags-input .tags .input {
+	    font-family: SourceSansPro-Regular, SourceSansPro, "Helvetica Neue", Arial;
+	}
+	tags-input .autocomplete .suggestion-item {
+	    font-family: SourceSansPro-Regular, SourceSansPro, "Helvetica Neue", Arial;
+	}
+	h4.xm-header {
+	     font-size: 21px;
+	     font-weight: normal;
+	     margin-top: 0;
+	}
+	.xm-left-icon {
+	    margin-right: 5px;
+	}
+	.xm-right-icon {
+	    margin-left: 0;
+	}
+	.xm-right-icon .remove-button .fa {
+	     font-size: 14px;
+	     vertical-align: text-top;
+	}
+	.form-control-feedback .fa {
+	     color: rgb(52, 61, 71);
+	}
+	.xm-success-message {
+	    max-width: 80%;
+	    min-width: 375px;
+	    padding: 0 40px;
+	}
+	.xm-cancel-button {
+		margin-left: 15px;
+	}
+    .compact tags-input .tags .input {
+        height: 16px;
+        font-size: 12px;
+    }
+	.compact tags-input .tags .tag-item {
+		height: 16px;
+		line-height: 15px;
+		font-size: 12px;
+	}
+	.compact .form-control-feedback {
+		line-height: 25px;
+	}
+&lt;/style&gt;
+&lt;div id="engage" ng-app="xm.engage-xm" class="container-fluid" ng-cloak=""&gt;
+	&lt;div ng-controller="engageCtlr"&gt;
+		&lt;div class="panel" ng-show="!is_finished"&gt;
+		&lt;h4 class="xm-header"&gt;{{ 'ENGAGE_XM.TITLE' | translate }}&lt;/h4&gt;
+		&lt;form name="engageXMForm" novalidate=""&gt;
+			&lt;div class="row"&gt;
+				&lt;div class="form-group col-md-12 has-feedback" ng-class="engageXMForm.recipients.$error.required ? 'is-required' : 'is-filled'"&gt;
+					&lt;span class="required-marker" &gt;&lt;/span&gt;
+					&lt;label class="xm-label"&gt;{{ 'ENGAGE_XM.LABEL.RECIPIENTS' | translate }}&lt;/label&gt;
+					&lt;div class="input-group xm-tags-input-group"&gt;
+						&lt;span class="input-group-btn"&gt;
+							&lt;button type="button" class="btn btn-secondary xm-input-group-btn dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"&gt;
+								&lt;span class="xm-left"&gt;{{ activeRecipientType.label | translate }}&lt;/span&gt;
+								&lt;span class="xm-right"&gt;
+									&lt;i class="fa fa-chevron-down"&gt;&lt;/i&gt;
+								&lt;/span&gt;
+							&lt;/button&gt;
+							&lt;ul class="dropdown-menu"&gt;
+								&lt;li ng-repeat="rType in recipientTypes"&gt;
+									&lt;a href="#" ng-click="selectRecipientType( $index )"&gt;{{ rType.label | translate }}&lt;/a&gt;
+								&lt;/li&gt;
+							&lt;/ul&gt;
+						&lt;/span&gt;
+						&lt;tags-input ng-model="recipients" id="recipients" name="recipients" required="required" min-length="2" template="x_xma_xmatters_xm_engage_recipient_template.do?sysparm_nostack=true"&gt;
+							&lt;auto-complete source="activeRecipientType.typeahead($query)" max-results-to-show="200"&gt;&lt;/auto-complete&gt;
+						&lt;/tags-input&gt;
+					&lt;/div&gt;
+					&lt;span class="form-control-feedback xm-tag-feedback" ng-show="xm_search_state.isSearching"&gt;
+						&lt;i class="fa fa-spinner fa-spin fa-fw"&gt;&lt;/i&gt;
+					&lt;/span&gt;
+					&lt;div class="xm-error" ng-messages="engageXMForm.recipients.$error" ng-show="engageXMForm.$submitted"&gt;
+						&lt;div ng-message="required"&gt;{{ 'ENGAGE_XM.ERROR.REQUIRED' | translate }}&lt;/div&gt;
+						&lt;div ng-message="no_ci"&gt;{{ 'ENGAGE_XM.ERROR.NO_CI' | translate }}&lt;/div&gt;
+					&lt;/div&gt;
+				&lt;/div&gt;
+			&lt;/div&gt;
+			&lt;div class="row"&gt;
+				&lt;div class="form-group col-sm-6" ng-class="engageXMForm.send_priority.$error.required ? 'is-required' : 'is-filled'"&gt;
+					&lt;span class="required-marker" &gt;&lt;/span&gt;
+					&lt;label class="xm-label"&gt;{{ 'ENGAGE_XM.LABEL.SEND_PRIORITY' | translate }}&lt;/label&gt;
+					&lt;select class="form-control" ng-model="send_priority" id="send_priority" name="send_priority"&gt;
+						&lt;option ng-repeat="priorityOpt in send_priority_options" value="{{priorityOpt.value}}" required="required"&gt;{{ priorityOpt.label | translate }}&lt;/option&gt;
+					&lt;/select&gt;
+					&lt;div class="xm-error" ng-messages="engageXMForm.send_priority.$error" ng-show="engageXMForm.$submitted"&gt;
+						&lt;div ng-message="required"&gt;{{ 'ENGAGE_XM.ERROR.REQUIRED' | translate }}&lt;/div&gt;
+					&lt;/div&gt;
+				&lt;/div&gt;
+				&lt;div class="form-group col-sm-6"&gt;
+					&lt;label class="xm-label"&gt;{{ 'ENGAGE_XM.LABEL.CONFERENCE_BRIDGE' | translate }}&lt;/label&gt;
+					&lt;select class="form-control" ng-model="conference_bridge"
+						ng-options="bridgeOpt as bridgeOpt.label | translate group by bridgeOpt.groupName | translate for bridgeOpt in conference_bridge_options"&gt;
+					&lt;/select&gt;
+				&lt;/div&gt;
+			&lt;/div&gt;
+			&lt;div class="row"&gt;
+				&lt;div class="form-group col-md-12" ng-class="engageXMForm.subject.$error.required ? 'is-required' : 'is-filled'"&gt;
+					&lt;span class="required-marker" &gt;&lt;/span&gt;
+					&lt;label class="xm-label"&gt;{{ 'ENGAGE_XM.LABEL.SUBJECT' | translate }}&lt;/label&gt;
+					&lt;input type="text" class="form-control" ng-model="subject" id="subject" name="subject" required="required" ng-maxlength="200" /&gt;
+					&lt;div class="xm-error" ng-messages="engageXMForm.subject.$error" ng-show="engageXMForm.$submitted"&gt;
+						&lt;div ng-message="required"&gt;{{ 'ENGAGE_XM.ERROR.REQUIRED' | translate }}&lt;/div&gt;
+						&lt;div ng-message="maxlength"&gt;{{ 'ENGAGE_XM.ERROR.MAX_LENGTH' | translate:'{ max_length: 200 }' }}&lt;/div&gt;
+					&lt;/div&gt;
+				&lt;/div&gt;
+			&lt;/div&gt;
+			&lt;div class="row"&gt;
+				&lt;div class="form-group col-md-12" ng-class="engageXMForm.message.$error.required ? 'is-required' : 'is-filled'"&gt;
+					&lt;span class="required-marker" &gt;&lt;/span&gt;
+					&lt;label class="xm-label"&gt;{{ 'ENGAGE_XM.LABEL.MESSAGE' | translate }}&lt;/label&gt;
+					&lt;textarea class="form-control" ng-model="message" id="message" name="message" required="required" ng-maxlength="2000" /&gt;
+					&lt;div class="xm-error" ng-messages="engageXMForm.message.$error" ng-show="engageXMForm.$submitted"&gt;
+						&lt;div ng-message="required"&gt;{{ 'ENGAGE_XM.ERROR.REQUIRED' | translate }}&lt;/div&gt;
+						&lt;div ng-message="maxlength"&gt;{{ 'ENGAGE_XM.ERROR.MAX_LENGTH' | translate:'{ max_length: 2000 }' }}&lt;/div&gt;
+					&lt;/div&gt;
+				&lt;/div&gt;
+			&lt;/div&gt;
+			&lt;div class="row"&gt;
+				&lt;div class="col-md-4"&gt;
+					&lt;button class="btn btn-default xm-btn-default" ng-click="submit()"&gt;{{ 'ENGAGE_XM.BUTTON.SUBMIT' | translate }}&lt;/button&gt;
+					&lt;button class="btn btn-default xm-btn-default xm-cancel-button" type="button" ng-click="cancel()"&gt;{{ 'ENGAGE_XM.BUTTON.CANCEL' | translate }}&lt;/button&gt;
+					&lt;span class="pull-right"&gt;&lt;button type="button" class="btn btn-default xm-btn-default" ng-disabled="!hasRelatedServices" ng-click="addCiGroups()"&gt;{{ 'ENGAGE_XM.BUTTON.ADD_CI_GROUPS' | translate }}&lt;/button&gt;&lt;/span&gt;
+				
+				&lt;/div&gt;
+			&lt;/div&gt;
+		&lt;/form&gt;
+		&lt;/div&gt;
+		&lt;div class="panel" ng-if="is_finished"&gt;
+			&lt;h4 class="xm-header"&gt;{{ 'ENGAGE_XM.TITLE' | translate }}&lt;/h4&gt;
+			&lt;div class="row"&gt;
+				&lt;div class="col-md-8 xm-success-message"&gt;
+					&lt;p&gt;{{ 'ENGAGE_XM.MESSAGE.SUCCESS' | translate }}&lt;/p&gt;
+				&lt;/div&gt;
+			&lt;/div&gt;
+			&lt;a href="{{engage_url}}" target="_top" class="btn btn-default xm-btn-default"&gt;{{ 'ENGAGE_XM.BUTTON.VIEW_RECORD' | translate }}&lt;/a&gt;
+		&lt;/div&gt;
+	&lt;/div&gt;
+&lt;/div&gt;
+&lt;/j:jelly&gt;]]&gt;&lt;/html&gt;&lt;name&gt;xm_engage_with_xmatters_content&lt;/name&gt;&lt;processing_script/&gt;&lt;sys_class_name&gt;sys_ui_page&lt;/sys_class_name&gt;&lt;sys_created_by&gt;admin&lt;/sys_created_by&gt;&lt;sys_created_on&gt;2016-07-11 18:30:00&lt;/sys_created_on&gt;&lt;sys_id&gt;c65690b94f2822008472a88ca310c7c2&lt;/sys_id&gt;&lt;sys_mod_count&gt;15&lt;/sys_mod_count&gt;&lt;sys_name&gt;xm_engage_with_xmatters_content&lt;/sys_name&gt;&lt;sys_package display_value="xMatters" source="x_xma_xmatters"&gt;5950d7444f2231000e9fa88ca310c78c&lt;/sys_package&gt;&lt;sys_policy/&gt;&lt;sys_scope display_value="xMatters"&gt;5950d7444f2231000e9fa88ca310c78c&lt;/sys_scope&gt;&lt;sys_update_name&gt;sys_ui_page_c65690b94f2822008472a88ca310c7c2&lt;/sys_update_name&gt;&lt;sys_updated_by&gt;admin&lt;/sys_updated_by&gt;&lt;sys_updated_on&gt;2020-08-04 16:57:11&lt;/sys_updated_on&gt;&lt;/sys_ui_page&gt;&lt;/record_update&gt;</payload>
+<payload_hash>-94349000</payload_hash>
+<remote_update_set display_value="Engage CMDB Extension v2.0">df8086842f225010338dd6c6f699b6d2</remote_update_set>
+<replace_on_upgrade>false</replace_on_upgrade>
+<sys_created_by>admin</sys_created_by>
+<sys_created_on>2020-08-05 23:08:13</sys_created_on>
+<sys_id>5f8086842f225010338dd6c6f699b6d3</sys_id>
+<sys_mod_count>0</sys_mod_count>
+<sys_recorded_at>173ba67ce000000001</sys_recorded_at>
+<sys_updated_by>admin</sys_updated_by>
+<sys_updated_on>2020-08-05 23:08:13</sys_updated_on>
+<table/>
+<target_name>xm_engage_with_xmatters_content</target_name>
+<type>UI Page</type>
+<update_domain>global</update_domain>
+<update_guid>ae022f6b5f1210104c44e0d2dfe1a8c9</update_guid>
+<update_guid_history>ae022f6b5f1210104c44e0d2dfe1a8c9:-94349000,e24866799f9fcc1426318eec72a746e6:1498244042,04d6160a094b0810c5007e8571f96328:-1635465146,5084978a7474f3007e8e5504d7c148e3:-1064886049,fe3defc9644b2f4091197fe10c2d9f9a:1661193389,0506ab0de50feb40f98e25ec168b5c79:1101856307</update_guid_history>
+<update_set display_value=""/>
+<view/>
+</sys_update_xml>
+</unload>
