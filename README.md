@@ -1,11 +1,6 @@
 # ServiceNow CI Support groups
 Notify support groups of CIs upstream or downstream of outages. This extension creates a button in Engage with xMatters which automatically adds the support groups of the related CIs to the recipient list.
 
-Sorry, under maintenance while we upgrade this guy... raise an issue if you need this asap.
-
-<img src="https://statuscast-web.azureedge.net/wp-content/uploads/2019/02/banner.png">
-
-
 <kbd>
   <img src="images/CIGroups.png" height="400">
 </kbd>
@@ -26,11 +21,11 @@ Sorry, under maintenance while we upgrade this guy... raise an issue if you need
 
 
 # Files
-* [CISupportGroups5.0.1.xml](CISupportGroups5.0.1.xml) - The update set containing the ServiceNow files
+* [Engage CMDB Extension v2.0.xml](Engage CMDB Extension v2.0.xml) - The update set containing the ServiceNow files
 * [xMCIUtils.xml](xMCIUtils.xml) - A script include in the Global application scope that builds the CI upstream/downstream list.
 
 # Installation
-This add on is packaged as an update set. So login to ServiceNow and navigate to "Retrieved Update Sets" and click the "Import Update Set from XML" link. Select the [CISupportGroups5.0.1.xml](CISupportGroups5.0.1.xml) file and click "Upload". This will load the files into ServiceNow, but they need to be "Previewed" for any collisions. 
+This add on is packaged as an update set. So login to ServiceNow and navigate to "Retrieved Update Sets" and click the "Import Update Set from XML" link. Select the [Engage CMDB Extension v2.0.xml](Engage CMDB Extension v2.0.xml) file and click "Upload". This will load the files into ServiceNow, but they need to be "Previewed" for any collisions. 
 
 <kbd>
   <img src="images/preview_update_set.png" height="400">
